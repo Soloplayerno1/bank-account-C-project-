@@ -7,7 +7,7 @@
 void clear_input_buffer();
 void Account();
 bool Login();
-void Log();
+
 
 #define MAX 26
 
@@ -18,19 +18,21 @@ typedef struct{
 }account;
 
 int main(){
-    Log();
+    int choose = 0; 
+    while(choose != 3)
+    {
+        printf("1.Login\n2.Create account\n3.Exit\n");
+        scanf("%d", &choose);
+        clear_input_buffer();
+        if(choose == 1)
+            Login();
+        if(choose == 2)
+            Account();
+        if(choose == 3)
+            return 1;
+    }
 }
 
-void Log(){
-    int choose; 
-    printf("1.Login\n2.Create account\n");
-    scanf("%d", &choose);
-    clear_input_buffer();
-    if(choose == 1)
-        Login();
-    if(choose == 2)
-        Account();
-}
 
 void get_User_Name(char* username, FILE *name){
     printf("User name: ");
@@ -81,7 +83,7 @@ void Account(){
     }
     fprintf(f, "\n%s, %s, %ld", user.name, user.password, user.balance);
     fclose(f);
-    printf("Create success.");
+    printf("Account \"%s\" has been created\n", user.name);
 }
 
 void clear_input_buffer(){
@@ -121,11 +123,11 @@ bool Login(){
         password[p] = '\0';
         if(!strcmp(user.name, username) && !strcmp(user.password, password))
         {
-            printf("Login success.");
+            printf("Login success.\n");
             return true;
         }
     }
     fclose(f);
-    printf("Incorrect username or password.");
+    printf("Incorrect username or password.\n");
     return false;
 }
