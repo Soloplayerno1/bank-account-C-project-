@@ -15,8 +15,9 @@ void clear_input_buffer();
 void Account();
 void Login();
 void inside_Account(account user);
-void Deposite(account user);
-void Withdraw(account user);
+bool Deposite(account user, char service, long *amount);
+bool Withdraw(account user, char service, long amount);
+void Transfer(account user);
 
 
 int main(){
@@ -26,6 +27,7 @@ int main(){
     {
         printf("_____________________________________\n");
         printf("1.Login\n2.Create account\n3.Exit\n");
+        printf("Choice: ");
         scanf("%d", &choose);
         clear_input_buffer();
         if(choose == 1)
@@ -37,6 +39,7 @@ int main(){
         if(choose == 3)
             return 1;
     }
+     return 0;
 }
 
 void inside_Account(account user){
@@ -57,15 +60,24 @@ void inside_Account(account user){
         printf("|               |\n");
         printf("|5.Exit         |\n");
         printf("|_______________|\n\n\n");
+        printf("Choice: ");
         scanf("%d", &choice);
+        clear_input_buffer();
         switch (choice)
         {
+        long amount;
         case 1:
-            Deposite(user);
+            printf("Amount: ");
+            scanf("%ld", &amount);
+            Deposite(user, 'D', &amount);
             break;
         case 2:
-            Withdraw(user);
+            printf("Amount: ");
+            scanf("%ld", &amount);
+            Withdraw(user, 'W', amount);
             break;
+        case 3:
+            Transfer(user);
         case 4:
             FILE *file = fopen("user.txt", "r");
             char line[256];
@@ -110,6 +122,43 @@ void inside_Account(account user){
         default:
             break;
         }
+        FILE *file = fopen("user.txt", "r");
+            char line[256];
+            fgets(line,256,file);
+            fgets(line,256,file);
+            while(fgets(line,256,file)!=NULL)
+        {
+            int i = 0;
+            char username[26], password[26];
+
+            while(line[i]!=',')
+            {
+                username[i] = line[i];
+                i++;
+            }
+            username[i] = '\0';
+            i+=2; 
+            int p=0;
+            while(line[i]!=',')
+            {
+                password[p] = line[i];
+                i++; p++;
+            }
+            password[p] = '\0';
+            if(!strcmp(user.name, username) && !strcmp(user.password, password))
+            {
+                i+=2;
+                int b = 0;
+                char balance[50];
+                while(line[i]!='\0')
+                {
+                    balance[b] = line[i];
+                    b++; i++;
+                }
+                user.balance = atol(balance);
+            }
+        }
+        fclose(file);
     }
 }
 
@@ -212,7 +261,7 @@ void Login(){
                 b++; i++;
             }
             user.balance = atol(balance);
-            printf("\n\n____________________Login success_______________________.\n");
+            printf("\n\n____________________Login success_______________________\n");
             fclose(f);
             inside_Account(user);
             return;
@@ -223,7 +272,7 @@ void Login(){
 }
 
 
-void update(account user){
+bool update(account user){
     FILE *read = fopen("user.txt", "r");
     char line[256];
     FILE *write = fopen("write.txt", "w");
@@ -231,6 +280,7 @@ void update(account user){
     fputs(line,write);
     fgets(line, 256, read);
     fputs(line,write);
+    bool found = false;
     while(fgets(line, 256, read)){
         char name[26];
         int i = 0;
@@ -240,44 +290,117 @@ void update(account user){
             i++;
         }
         name[i] = '\0';
+        i+=2;
+        int p=0;
+        while(line[i]!=',')
+        {
+            user.password[p] = line[i];
+            i++; p++;
+        }
+            user.password[p] = '\0';
         if(!strcmp(name,user.name))
         {
             fprintf(write, "%s, %s, %ld\n", user.name, user.password, user.balance);
+            found = true;
             continue;
         }
         fputs(line,write);
     }
-
     fclose(read);
     fclose(write);
 
     remove("user.txt");
     rename("write.txt", "user.txt");
+    if(!found)
+        {
+            printf("User not found!\n");
+            return false;
+        }
+    return true;
 }
 
-void Deposite(account user){
-    printf("\n---------------DEPOSITE------------------\n");
-    long amount;
-    printf("Amount: ");
-    scanf("%ld", &amount);
-    user.balance = user.balance + amount;
-
-    update(user);
-    printf("....Deposite succes!....\n");
+bool Deposite(account user, char service, long *amount){
+    if(service == 'D')
+        printf("\n---------------DEPOSITE------------------\n");
+    while(*amount<=0)
+    {
+        printf("Amount must be > 0\n");
+        printf("Amount: ");
+        scanf("%ld", amount);
+    }
+    user.balance = user.balance + *amount;
+    if(update(user))
+        {
+            if(service == 'D')
+                printf("....Deposite succes!....\n");
+            return true;
+        }
+    return false;
 }
 
-void Withdraw(account user){
-    printf("\n---------------WITHDRAW------------------\n");
-    long amount;
-    printf("Amount: \n");
-    scanf("%ld", &amount);
+bool Withdraw(account user, char service, long amount){
+    if(service == 'W')
+        printf("\n---------------WITHDRAW------------------\n");
     if(amount>user.balance)
     {
-        printf("Withdraw failure!(Don't have enough money)\n");
-        return;
+        if(service == 'W')
+            printf("Withdraw failure!(Don't have enough money)\n");
+        return false;
     }
     user.balance = user.balance - amount;
-    update(user);
-    printf("--------< Withdraw success >--------");
+    if(update(user))
+    {
+        if(service == 'W')
+            printf("--------< Withdraw success >--------\n");
+        return true;
+    }
+    return false;
+}
+
+void Transfer(account user){
+    account reciever;
+    printf("----------TRANSFER----------\n");
+    printf("To: ");
+    fgets(reciever.name, 26, stdin);
+    int i = 0;
+    while(reciever.name[i]!='\0')
+    {
+        if(reciever.name[i] == '\n')
+            reciever.name[i] = '\0';
+        i++;
+    }
+    bool namedup = false;
+    FILE *name = fopen("name.txt", "r");
+    char n[256];
+    while(fgets(n, 256, name)!=NULL)
+    {
+        int j=0;
+        while(n[j]!='\0')
+        {
+            if(n[j] == '\n')
+                n[j] = '\0';
+            j++;
+        }
+        if(!strcmp(reciever.name,n))
+        {
+            namedup = true;
+        }
+    }
+    fclose(name);
+    if(!namedup)
+    {
+        printf("User not found!");
+        return;
+    }
+    printf("Amount: ");
+    scanf("%ld", &reciever.balance);
+    
+    if(!Withdraw(user,'T', reciever.balance))
+    {
+        printf("Transaction failure(Don't have enough money!)\n");  
+        return ;
+    }
+    Deposite(reciever, 'T', &reciever.balance);
+    printf("------------<Transaction success>-------------\n");
     return;
 }
